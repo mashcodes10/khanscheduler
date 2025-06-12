@@ -8,6 +8,9 @@ export async function getCalendarEventTimes(
   clerkUserId: string,
   { start, end }: { start: Date; end: Date }
 ) {
+  if (start >= end) {
+    return [];
+  }
   const oAuthClient = await getOAuthClient(clerkUserId)
 
   // Get all calendar IDs
