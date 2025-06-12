@@ -16,7 +16,10 @@ export async function createMeeting(
 ) {
   const { success, data } = meetingActionSchema.safeParse(unsafeData)
 
-  if (!success) return { error: true }
+  if (!success) {
+    console.error("Meeting form validation failed", unsafeData)
+    return { error: true }
+  }
 
   const event = await db.query.EventTable.findFirst({
     where: ({ clerkUserId, isActive, id }, { eq, and }) =>
@@ -27,22 +30,34 @@ export async function createMeeting(
       ),
   })
 
-  if (event == null) return { error: true }
+  if (event == null) {
+    console.error("Event not found", data)
+    return { error: true }
+  }
   const startInTimezone = fromZonedTime(data.startTime, data.timezone)
 
   const validTimes = await getValidTimesFromSchedule([startInTimezone], event)
-  if (validTimes.length === 0) return { error: true }
+  if (validTimes.length === 0) {
+    console.error("No valid times for event", { startInTimezone, event })
+    return { error: true }
+  }
 
   // Fetch host email from Clerk
   const calendarUser = await clerkClient().users.getUser(data.clerkUserId)
   const hostEmail = calendarUser.primaryEmailAddress?.emailAddress
-  if (!hostEmail) return { error: true }
+  if (!hostEmail) {
+    console.error("Host email not found for user", data.clerkUserId)
+    return { error: true }
+  }
 
   // Fetch Zoom token from DB
   const zoomToken = await db.query.ZoomTokenTable.findFirst({
     where: (fields, { eq }) => eq(fields.userId, data.clerkUserId),
   })
-  if (!zoomToken) throw new Error("User has not connected Zoom")
+  if (!zoomToken) {
+    console.error("User has not connected Zoom", data.clerkUserId)
+    throw new Error("User has not connected Zoom")
+  }
 
   const accessToken = zoomToken.accessToken
 
@@ -57,17 +72,22 @@ export async function createMeeting(
       host_email: hostEmail,
     })
   } catch (e) {
-    // Optionally handle Zoom errors gracefully
+    console.error("Error creating Zoom meeting", e)
     zoomMeeting = null
   }
 
-  await createCalendarEvent({
-    ...data,
-    startTime: startInTimezone,
-    durationInMinutes: event.durationInMinutes,
-    eventName: event.name,
-    zoomLink: zoomMeeting?.join_url,
-  })
+  try {
+    await createCalendarEvent({
+      ...data,
+      startTime: startInTimezone,
+      durationInMinutes: event.durationInMinutes,
+      eventName: event.name,
+      zoomLink: zoomMeeting?.join_url,
+    })
+  } catch (e) {
+    console.error("Error creating calendar event", e)
+    return { error: true }
+  }
 
   redirect(
     `/book/${data.clerkUserId}/${data.eventId}/success?startTime=${data.startTime.toISOString()}`
