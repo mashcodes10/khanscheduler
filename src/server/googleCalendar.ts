@@ -2,6 +2,7 @@ import "use-server"
 import { clerkClient } from "@clerk/nextjs/server"
 import { google } from "googleapis"
 import { addMinutes, endOfDay, startOfDay } from "date-fns"
+import type { OAuth2Client } from "google-auth-library"
 
 export async function getCalendarEventTimes(
   clerkUserId: string,
@@ -91,14 +92,14 @@ export async function createCalendarEvent({
   return calendarEvent.data
 }
 
-async function getOAuthClient(clerkUserId: string) {
+async function getOAuthClient(clerkUserId: string): Promise<OAuth2Client> {
   const token = await clerkClient().users.getUserOauthAccessToken(
     clerkUserId,
     "oauth_google"
   )
 
   if (token.data.length === 0 || token.data[0].token == null) {
-    return
+    throw new Error("No OAuth token found for user")
   }
 
   const client = new google.auth.OAuth2(
@@ -112,7 +113,7 @@ async function getOAuthClient(clerkUserId: string) {
   return client
 }
 
-async function getAllCalendarIds(oAuthClient) {
+async function getAllCalendarIds(oAuthClient: OAuth2Client) {
   const calendarList = await google.calendar("v3").calendarList.list({
     auth: oAuthClient,
     maxResults: 250,

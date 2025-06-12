@@ -37,6 +37,10 @@ export async function GET(req: Request) {
 
     const { userId } = auth();
 
+    if (!userId) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     await db.insert(ZoomTokenTable).values({
       userId,
       zoomUserId,
@@ -45,7 +49,7 @@ export async function GET(req: Request) {
       expiresAt: new Date(Date.now() + expires_in * 1000),
     });
 
-    return NextResponse.redirect(new URL("/connect-apps/success", req.url));
+    return NextResponse.redirect("/connect-apps/success");
   } catch (error) {
     console.error("Zoom callback error:", error);
     return NextResponse.json({ error: error?.toString() }, { status: 500 });

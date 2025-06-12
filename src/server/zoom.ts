@@ -68,6 +68,9 @@ export async function createZoomMeeting({
 export async function createZoomMeetingWithToken({
   accessToken,
   ...meetingDetails
+}: {
+  accessToken: string;
+  [key: string]: any;
 }) {
   const response = await axios.post(
     `https://api.zoom.us/v2/users/me/meetings`,
