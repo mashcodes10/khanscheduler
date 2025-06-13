@@ -29,6 +29,7 @@ import { Plus, X } from "lucide-react"
 import { Input } from "../ui/input"
 import { saveSchedule } from "@/server/actions/schedule"
 import { convertFromUTC, convertToUTC, formatInTimezone } from "@/lib/timezone"
+import { toZonedTime } from "date-fns-tz"
 
 type Availability = {
   startTime: string
@@ -81,19 +82,18 @@ export function ScheduleForm({
           const date = new Date()
           value.availabilities?.forEach((availability, index) => {
             if (availability && availability.dayOfWeek) {
-              const startTime = convertFromUTC(
-                convertToUTC(new Date(`${date.toISOString().split('T')[0]}T${availability.startTime}`), oldTimezone),
-                newTimezone
-              )
-              const endTime = convertFromUTC(
-                convertToUTC(new Date(`${date.toISOString().split('T')[0]}T${availability.endTime}`), oldTimezone),
-                newTimezone
-              )
+              // Create a date object in the old timezone
+              const oldStartTime = new Date(`${date.toISOString().split('T')[0]}T${availability.startTime}`)
+              const oldEndTime = new Date(`${date.toISOString().split('T')[0]}T${availability.endTime}`)
+
+              // Convert to the new timezone
+              const newStartTime = toZonedTime(oldStartTime, newTimezone)
+              const newEndTime = toZonedTime(oldEndTime, newTimezone)
 
               updateAvailability(index, {
                 dayOfWeek: availability.dayOfWeek,
-                startTime: formatInTimezone(startTime, newTimezone, 'HH:mm'),
-                endTime: formatInTimezone(endTime, newTimezone, 'HH:mm'),
+                startTime: formatInTimezone(newStartTime, newTimezone, 'HH:mm'),
+                endTime: formatInTimezone(newEndTime, newTimezone, 'HH:mm'),
               })
             }
           })

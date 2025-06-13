@@ -6,7 +6,7 @@ import "use-server"
 import { z } from "zod"
 import { createCalendarEvent } from "../googleCalendar"
 import { redirect } from "next/navigation"
-import { fromZonedTime } from "date-fns-tz"
+import { toZonedTime } from "date-fns-tz"
 import { createZoomMeeting } from "../zoom"
 import { clerkClient } from "@clerk/nextjs/server"
 import { ZoomTokenTable } from "@/drizzle/schema"
@@ -34,11 +34,13 @@ export async function createMeeting(
     console.error("Event not found", data)
     return { error: true }
   }
-  const startInTimezone = fromZonedTime(data.startTime, data.timezone)
 
-  const validTimes = await getValidTimesFromSchedule([startInTimezone], event)
+  // Convert the start time to UTC for validation
+  const startInUTC = toZonedTime(data.startTime, data.timezone)
+
+  const validTimes = await getValidTimesFromSchedule([startInUTC], event)
   if (validTimes.length === 0) {
-    console.error("No valid times for event", { startInTimezone, event })
+    console.error("No valid times for event", { startInUTC, event })
     return { error: true }
   }
 
@@ -66,7 +68,7 @@ export async function createMeeting(
   try {
     zoomMeeting = await createZoomMeeting({
       topic: event.name,
-      start_time: startInTimezone,
+      start_time: startInUTC,
       duration: event.durationInMinutes,
       agenda: event.description || undefined,
       host_email: hostEmail,
@@ -79,7 +81,7 @@ export async function createMeeting(
   try {
     await createCalendarEvent({
       ...data,
-      startTime: startInTimezone,
+      startTime: startInUTC,
       durationInMinutes: event.durationInMinutes,
       eventName: event.name,
       zoomLink: zoomMeeting?.join_url,
