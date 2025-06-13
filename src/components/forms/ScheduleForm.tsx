@@ -13,7 +13,6 @@ import {
   FormMessage,
 } from "../ui/form"
 import { Button } from "../ui/button"
-import { createEvent, deleteEvent, updateEvent } from "@/server/actions/events"
 import { DAYS_OF_WEEK_IN_ORDER } from "@/data/constants"
 import { scheduleFormSchema } from "@/schema/schedule"
 import { timeToInt } from "@/lib/utils"
@@ -25,10 +24,11 @@ import {
   SelectValue,
 } from "../ui/select"
 import { formatTimezoneOffset } from "@/lib/formatters"
-import { Fragment, useState } from "react"
+import { Fragment, useEffect, useState } from "react"
 import { Plus, X } from "lucide-react"
 import { Input } from "../ui/input"
 import { saveSchedule } from "@/server/actions/schedule"
+import { convertFromUTC, convertToUTC, formatInTimezone } from "@/lib/timezone"
 
 type Availability = {
   startTime: string
@@ -45,6 +45,7 @@ export function ScheduleForm({
   }
 }) {
   const [successMessage, setSuccessMessage] = useState<string>()
+  const [errorMessage, setErrorMessage] = useState<string>()
   const form = useForm<z.infer<typeof scheduleFormSchema>>({
     resolver: zodResolver(scheduleFormSchema),
     defaultValues: {
@@ -60,6 +61,7 @@ export function ScheduleForm({
     append: addAvailability,
     remove: removeAvailability,
     fields: availabilityFields,
+    update: updateAvailability,
   } = useFieldArray({ name: "availabilities", control: form.control })
 
   const groupedAvailabilityFields = Object.groupBy(
@@ -67,12 +69,51 @@ export function ScheduleForm({
     availability => availability.dayOfWeek
   )
 
+  // Handle timezone changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "timezone" && value.timezone) {
+        // Convert all times to the new timezone
+        const newTimezone = value.timezone
+        const oldTimezone = schedule?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+
+        if (oldTimezone !== newTimezone) {
+          const date = new Date()
+          value.availabilities?.forEach((availability, index) => {
+            if (availability && availability.dayOfWeek) {
+              const startTime = convertFromUTC(
+                convertToUTC(new Date(`${date.toISOString().split('T')[0]}T${availability.startTime}`), oldTimezone),
+                newTimezone
+              )
+              const endTime = convertFromUTC(
+                convertToUTC(new Date(`${date.toISOString().split('T')[0]}T${availability.endTime}`), oldTimezone),
+                newTimezone
+              )
+
+              updateAvailability(index, {
+                dayOfWeek: availability.dayOfWeek,
+                startTime: formatInTimezone(startTime, newTimezone, 'HH:mm'),
+                endTime: formatInTimezone(endTime, newTimezone, 'HH:mm'),
+              })
+            }
+          })
+        }
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [form, schedule?.timezone, updateAvailability])
+
   async function onSubmit(values: z.infer<typeof scheduleFormSchema>) {
+    setErrorMessage(undefined)
+    setSuccessMessage(undefined)
+    
     const data = await saveSchedule(values)
 
     if (data?.error) {
+      setErrorMessage(data.message || "There was an error saving your schedule")
       form.setError("root", {
-        message: "There was an error saving your schedule",
+        message: data.message || "There was an error saving your schedule",
       })
     } else {
       setSuccessMessage("Schedule saved!")
@@ -89,6 +130,9 @@ export function ScheduleForm({
           <div className="text-destructive text-sm">
             {form.formState.errors.root.message}
           </div>
+        )}
+        {errorMessage && (
+          <div className="text-destructive text-sm">{errorMessage}</div>
         )}
         {successMessage && (
           <div className="text-green-500 text-sm">{successMessage}</div>
@@ -114,6 +158,9 @@ export function ScheduleForm({
                   ))}
                 </SelectContent>
               </Select>
+              <FormDescription>
+                All times will be converted to this timezone
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

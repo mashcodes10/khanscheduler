@@ -36,7 +36,7 @@ export const EventTable = pgTable(
 
 export const ScheduleTable = pgTable("schedules", {
   id: uuid("id").primaryKey().defaultRandom(),
-  timezone: text("timezone").notNull(),
+  timezone: text("timezone").notNull().default('UTC'),
   clerkUserId: text("clerkUserId").notNull().unique(),
   createdAt,
   updatedAt,
@@ -76,7 +76,7 @@ export const ScheduleAvailabilityRelations = relations(
 
 export const ZoomTokenTable = pgTable("zoom_tokens", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("userId").notNull(), // Your app's user ID
+  userId: text("userId").notNull(),
   zoomUserId: text("zoomUserId").notNull(),
   accessToken: text("accessToken").notNull(),
   refreshToken: text("refreshToken").notNull(),
