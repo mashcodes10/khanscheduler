@@ -117,6 +117,7 @@ function getAvailabilities(
     const [startHours, startMinutes] = startTime.split(":").map(Number)
     const [endHours, endMinutes] = endTime.split(":").map(Number)
 
+<<<<<<< HEAD
     // Create a date object in the schedule's timezone
     const localStart = setMinutes(setHours(date, startHours), startMinutes)
     const localEnd = setMinutes(setHours(date, endHours), endMinutes)
@@ -124,7 +125,16 @@ function getAvailabilities(
     // Convert to UTC for comparison
     const start = new Date(localStart.toLocaleString('en-US', { timeZone: timezone }))
     const end = new Date(localEnd.toLocaleString('en-US', { timeZone: timezone }))
+=======
+    // Create dates in the schedule's timezone
+    const zonedDate = toZonedTime(date, timezone)
+    const start = toZonedTime(setMinutes(setHours(zonedDate, startHours), startMinutes), timezone)
+    const end = toZonedTime(setMinutes(setHours(zonedDate, endHours), endMinutes), timezone)
+>>>>>>> 8e67176 (Revert commit db7e57fd39512f6d918fcdbd2e2cefb6a8d71210)
 
-    return { start, end }
+    return { 
+      start: new Date(start), 
+      end: new Date(end) 
+    }
   })
 }

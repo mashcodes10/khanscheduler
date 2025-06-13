@@ -84,3 +84,21 @@ export const ZoomTokenTable = pgTable("zoom_tokens", {
   createdAt,
   updatedAt,
 });
+
+export const MeetingTable = pgTable("meetings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  eventId: uuid("eventId")
+    .notNull()
+    .references(() => EventTable.id, { onDelete: "cascade" }),
+  startTime: timestamp("startTime").notNull(),
+  guestEmail: text("guestEmail").notNull(),
+  guestName: text("guestName").notNull(),
+  guestNotes: text("guestNotes"),
+  timezone: text("timezone").notNull(),
+  zoomMeetingId: text("zoomMeetingId").notNull(),
+  googleCalendarEventId: text("googleCalendarEventId").notNull(),
+  createdAt,
+  updatedAt,
+}, table => ({
+  eventIdIndex: index("eventIdIndex").on(table.eventId),
+}));

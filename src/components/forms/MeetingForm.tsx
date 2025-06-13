@@ -38,6 +38,15 @@ import { useMemo } from "react"
 import { toZonedTime } from "date-fns-tz"
 import { createMeeting } from "@/server/actions/meetings"
 
+// Add type for Next.js redirect error
+interface RedirectError extends Error {
+  digest?: string
+}
+
+function isRedirectError(error: unknown): error is RedirectError {
+  return error instanceof Error && 'digest' in error
+}
+
 export function MeetingForm({
   validTimes,
   eventId,
@@ -61,13 +70,27 @@ export function MeetingForm({
   }, [validTimes, timezone])
 
   async function onSubmit(values: z.infer<typeof meetingFormSchema>) {
-    const data = await createMeeting({
-      ...values,
-      eventId,
-      clerkUserId,
-    })
+    try {
+      const data = await createMeeting({
+        ...values,
+        eventId,
+        clerkUserId,
+      })
 
-    if (data?.error) {
+      // If we get here, check for error
+      if (data?.error) {
+        form.setError("root", {
+          message: data.message || "There was an error saving your event",
+        })
+      }
+    } catch (error) {
+      // Check if the error is a redirect
+      if (isRedirectError(error) && error.digest?.includes('NEXT_REDIRECT')) {
+        // This is a successful case, the redirect will happen automatically
+        return
+      }
+      
+      // If it's not a redirect, it's a real error
       form.setError("root", {
         message: "There was an error saving your event",
       })

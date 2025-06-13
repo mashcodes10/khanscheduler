@@ -30,6 +30,10 @@ import { Input } from "../ui/input"
 import { saveSchedule } from "@/server/actions/schedule"
 import { convertFromUTC, convertToUTC, formatInTimezone } from "@/lib/timezone"
 import { toZonedTime } from "date-fns-tz"
+<<<<<<< HEAD
+=======
+import { formatInTimeZone } from "date-fns-tz"
+>>>>>>> 8e67176 (Revert commit db7e57fd39512f6d918fcdbd2e2cefb6a8d71210)
 
 type Availability = {
   startTime: string
@@ -83,6 +87,7 @@ export function ScheduleForm({
           value.availabilities?.forEach((availability, index) => {
             if (availability && availability.dayOfWeek) {
               // Create a date object in the old timezone
+<<<<<<< HEAD
               const oldStartTime = new Date(`${date.toISOString().split('T')[0]}T${availability.startTime}`)
               const oldEndTime = new Date(`${date.toISOString().split('T')[0]}T${availability.endTime}`)
 
@@ -94,6 +99,19 @@ export function ScheduleForm({
                 dayOfWeek: availability.dayOfWeek,
                 startTime: formatInTimezone(newStartTime, newTimezone, 'HH:mm'),
                 endTime: formatInTimezone(newEndTime, newTimezone, 'HH:mm'),
+=======
+              const oldStartTime = toZonedTime(new Date(`${date.toISOString().split('T')[0]}T${availability.startTime}`), oldTimezone)
+              const oldEndTime = toZonedTime(new Date(`${date.toISOString().split('T')[0]}T${availability.endTime}`), oldTimezone)
+
+              // Convert to the new timezone
+              const newStartTime = formatInTimeZone(oldStartTime, newTimezone, 'HH:mm')
+              const newEndTime = formatInTimeZone(oldEndTime, newTimezone, 'HH:mm')
+
+              updateAvailability(index, {
+                dayOfWeek: availability.dayOfWeek,
+                startTime: newStartTime,
+                endTime: newEndTime,
+>>>>>>> 8e67176 (Revert commit db7e57fd39512f6d918fcdbd2e2cefb6a8d71210)
               })
             }
           })
