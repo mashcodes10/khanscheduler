@@ -87,8 +87,8 @@ export function ScheduleForm({
               const oldEndTime = new Date(`${date.toISOString().split('T')[0]}T${availability.endTime}`)
 
               // Convert to the new timezone
-              const newStartTime = toZonedTime(oldStartTime, newTimezone)
-              const newEndTime = toZonedTime(oldEndTime, newTimezone)
+              const newStartTime = new Date(oldStartTime.toLocaleString('en-US', { timeZone: newTimezone }))
+              const newEndTime = new Date(oldEndTime.toLocaleString('en-US', { timeZone: newTimezone }))
 
               updateAvailability(index, {
                 dayOfWeek: availability.dayOfWeek,

@@ -16,7 +16,7 @@ import {
   setHours,
   setMinutes,
 } from "date-fns"
-import { toZonedTime } from "date-fns-tz"
+import { formatInTimeZone, toZonedTime } from "date-fns-tz"
 
 export async function getValidTimesFromSchedule(
   timesInOrder: Date[],
@@ -117,15 +117,13 @@ function getAvailabilities(
     const [startHours, startMinutes] = startTime.split(":").map(Number)
     const [endHours, endMinutes] = endTime.split(":").map(Number)
 
-    const start = toZonedTime(
-      setMinutes(setHours(date, startHours), startMinutes),
-      timezone
-    )
+    // Create a date object in the schedule's timezone
+    const localStart = setMinutes(setHours(date, startHours), startMinutes)
+    const localEnd = setMinutes(setHours(date, endHours), endMinutes)
 
-    const end = toZonedTime(
-      setMinutes(setHours(date, endHours), endMinutes),
-      timezone
-    )
+    // Convert to UTC for comparison
+    const start = new Date(localStart.toLocaleString('en-US', { timeZone: timezone }))
+    const end = new Date(localEnd.toLocaleString('en-US', { timeZone: timezone }))
 
     return { start, end }
   })
